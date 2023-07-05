@@ -132,18 +132,45 @@ Copy the Jenkins URL: http://16.171.143.132:8080/ > Save and Finish > Start usin
 + New Item > Item Name: automated-pipeline > Freestyle Project > OK
 
 ### Go to Source Code Management:
- Git > Enter the Repo URL (Use the HTTPS url): https://github.com/valyndsilva/ci-cd-pipeline.git > Branch Specifier: */main > Save
+Git > Enter the Repo URL (Use the HTTPS url): https://github.com/valyndsilva/ci-cd-pipeline.git > Branch Specifier: */main > Save
 
- ### Go to Build Triggers
- CSelect the check box - GitHub hook trigger for GITScm pooling
+### Go to Build Triggers
+Select the check box - GitHub hook trigger for GITScm pooling
 
- ### Go to the Git Repo to add a Webhook
-  Settings > Webhooks > Add webhook > Authenticate > Copy the Jenkins Url (IP:Port/github-webhook)
-  Add it to Payload URL: http://16.171.143.132:8080/github-webhook/
-  Which events would you like to trigger this webhook? Let me select individual events. > Enable "Pull requests" and "Pushes" > Add webhook
+### Go to the Git Repo to add a Webhook  
+Settings > Webhooks > Add webhook > Authenticate > Copy the Jenkins Url (IP:Port/github-webhook)
 
-  ### Test Pipeline without webhook first:
-  Go to http://16.171.143.132:8080 > Select item "automated-pipeline" > Build Now > Status shows green check success
+Add it to Payload URL: http://16.171.143.132:8080/github-webhook/
+Which events would you like to trigger this webhook? Let me select individual events. > Enable "Pull requests" and "Pushes" > Add webhook
 
-Do a few updates in your project code.
-  Go to Workspace >
+### Test Pipeline without and with webhook:
+Go to http://16.171.143.132:8080 > Select item "automated-pipeline" > Build Now > Status shows green check success
+
+Do a few updates in your project code and commit the changes to your repo and push.
+Go to Workspace > You will see the updates
+
+Any changes done to the Github Repo will trigger Jenkins automatically and pull the code from GitHub.
+
+## Create a Server for SonarQube.
+Go to AWS EC2 SonarQube Instance > Instance ID > Copy Public IPv4 address
+Open a new Terminal > new tab:
+```
+cd Downloads
+ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.135.185
+```
+
+Now we are in the SonarQube Virtual Machine. We can change the hostname as below:
+```
+sudo hostnamectl set-hostname sonarqube
+/bin/bash
+```
+
+You will notice the hostname has now changed from ubuntu@ip-172-31-43-223 to ubuntu@sonarqube.
+
+Let's do the same for Jenkins Virtual Machine. Open the terminal priviously running with Jenkins.
+```
+sudo hostnamectl set-hostname jenkins
+/bin/bash
+```
+
+the hostname has now changed from ubuntu@ip-172-31-34-239 to ubuntu@jenkins.
