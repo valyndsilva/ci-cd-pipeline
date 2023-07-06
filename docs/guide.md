@@ -388,7 +388,7 @@ Go to https://hub.docker.com/_/nginx
 Create Dockerfile without any extension in the root directory.
 ```
 FROM nginx
-COPY ./usr/share/nginx/html/
+COPY . /usr/share/nginx/html/
 ```
 
 Commit and push the changes to the git repo.
@@ -442,7 +442,15 @@ docker run -d -p 8085:80 --name=nextjs-website mywebsite (run container from thi
 ```
 Save > Build Now
 
-Next, verify if the container is working fine by running this comand in the docker terminal:
+It should be built successfully.
+
+Next, verify if the container is working fine on port 8085 by running this command in the docker terminal:
 ```
 docker ps
 ```
+We cannot access port 8085 as we have not given it access in AWS EC2 Instance for Docker-Server.
+
+## Allow Port 8085 in your Docker-Server EC2 Instance:
+Go to the Docker-Server EC2 Instance > Security > Security groups link > Edit Inbound Rules > Add Rule > Type: Custom TCP >  Port Range: 8085 > Source: 0.0.0.0/0 > Description: nextjs-website > Save Rules
+Copy the Docker-Server  EC2 Instance Public IPv4 address 16.171.154.7
+Verify it it works by going to http://16.171.154.7:8085
