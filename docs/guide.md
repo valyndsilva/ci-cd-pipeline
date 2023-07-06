@@ -454,3 +454,25 @@ We cannot access port 8085 as we have not given it access in AWS EC2 Instance fo
 Go to the Docker-Server EC2 Instance > Security > Security groups link > Edit Inbound Rules > Add Rule > Type: Custom TCP >  Port Range: 8085 > Source: 0.0.0.0/0 > Description: nextjs-website > Save Rules
 Copy the Docker-Server  EC2 Instance Public IPv4 address 16.171.154.7
 Verify it it works by going to http://16.171.154.7:8085
+
+## Remove Exisitng Containers
+If for any reason you need to remove the container use this command in the docker terminal:
+```
+docker rm nextjs-website
+```
+## Run Specific Docker Container
+To run an existing container instead of "run" use "start" in Remote Shell in Jenkins server:
+```
+docker start CONTAINERID
+```
+
+Ex:
+```
+cd /home/ubuntu/website
+docker start 5175b1cc2d7f
+```
+
+To get containerID use:
+```
+docket ps -a
+```
