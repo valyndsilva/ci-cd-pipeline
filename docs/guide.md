@@ -17,39 +17,49 @@ git push -u origin main
 We have to create 3 EC2 instances (Virtual Servers in the Cloud) on AWS.
 
 ### Create an instance for Jenkins:
-Search for EC2 > Launch Instance > Name: Jenkins > OS: Ubuntu > Instance Type: t3.micro (Free tier) > Key pair(login) > Create new key pair > Key pair name: SSH-KEY-Jenkins > Key pair type: RSA > Private key file format: .pem > Create key pair > Launch Instance
+Search for EC2 > Launch Instance > Name: Jenkins-Server > OS: Ubuntu > Instance Type: t3.medium > Key pair(login) > Create new key pair > Key pair name: SSH-KEY-Jenkins > Key pair type: RSA > Private key file format: .pem > Create key pair > Launch Instance
 
 ### Create an instance for SonarQube:
 SonarQube consumes alot of memory so choose an instance with minimum 2GB memory.
-Search for EC2 > Launch Instance > Name: SonarQube > OS: Ubuntu > Instance Type: t3.small > Key pair(login) > Select the key created in previous step. Key pair name: SSH-KEY-Jenkins > Launch Instance
+Search for EC2 > Launch Instance > Name: SonarQube > OS: Ubuntu > Instance Type: t3.medium > Key pair(login) > Select the key created in previous step. Key pair name: SSH-KEY-Jenkins > Launch Instance
 
 ### Create an instance for Docker:
-Search for EC2 > Launch Instance > Name: Docker-Server > OS: Ubuntu > Instance Type: t3.micro (Free tier) > Key pair(login) > Select the key created in previous step. Key pair name: SSH-KEY-Jenkins > Launch Instance
+Search for EC2 > Launch Instance > Name: Docker-Server > OS: Ubuntu > Instance Type: t3.medium > Key pair(login) > Select the key created in previous step. Key pair name: SSH-KEY-Jenkins > Launch Instance
 
 ## SSH into the Jenkins Instance:
-Click on the Jenkins Instance ID under Instance.
-Copy the Public IPv4 address.
-Open Terminal
+Click on the Jenkins Instance ID under Instance. Copy the Public IPv4 address. Open Terminal
 
 ```
 cd Downloads
-ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.143.132
+chmod 400 SSH-KEY-Jenkins.pem (update permissions to access the pem file)
+ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.132.48
 ```
 
-You get a message:
+Rename the Jenkins Virtual Machine Hostname
 ```
-The authenticity of host '...' can't be established.
-ED25519 key fingerprint is ......
-This key is not known by any other names
-Are you sure you want to continue connecting (yes/no/[fingerprint])? 
+sudo hostnamectl set-hostname jenkins
+/bin/bash
 ```
 
-You get an error. Fix it by updating the permissions:
+The hostname has now changed from ubuntu@ip-172-31-35-144 to ubuntu@jenkins.
+
+Now we are in the Virtual machine. Next, we need to update and install Java Runtime Envionment to run Jenkins and then install Jenkins. Go to https://www.jenkins.io/doc/book/installing/linux/#debianubuntu  
+
+Go to Installing Jenkins > Linux > Debian/Ubuntu and copy the code under Long Term Support Release.
+
 ```
-chmod 400 SSH-KEY-Jenkins.pem
-ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.143.132
+sudo apt update
+sudo apt install openjdk-11-jre (require version 11 of the jre for jenkins)
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins
 ```
 
+## Setup administrator password:
 we need to switch to superuser by running this command:
 ```
 sudo su
@@ -87,26 +97,10 @@ passwd ubuntu
 
 And set your preferred password. Now, exit from the server and login again with your password that you’ve set just now. Run this command, and then give the password.
 ```
-ssh ubuntu@16.171.143.132
+ssh ubuntu@16.171.132.48
 ```
 
-Now we are in the Virtual machine. Next, we need to update and install Java Runtime Envionment to run Jenkins and then install Jenkins. Go to https://www.jenkins.io/doc/book/installing/linux/#debianubuntu  
-
-Go to Installing Jenkins > Linux > Debian/Ubuntu and copy the code under Long Term Support Release.
-
-```
-sudo apt update
-sudo apt install openjdk-11-jre
-curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
-  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
-sudo apt-get update
-sudo apt-get install jenkins
-```
-
-## Allow Port 8080 in your EC2 Instance:
+## Allow Port 8080 in your Jenkins EC2 Instance:
 Go to the Jenkins EC2 Instance > Security > Security groups link > Edit Inbound Rules > Add Rule > Type: Custom TCP >  Port Range: 8080 > Source: 0.0.0.0/0 > Save Rules
 
 ## Check if Jenkins is Installed:
@@ -120,13 +114,13 @@ If you don't know the administartor password or didn't copy the secret token key
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword 
 ```
 
-Copy the Public IPv4 Instance. Now go to 16.171.143.132:8080 > Install suggested plugins.
+Copy the Public IPv4 Instance. Now go to http://16.171.132.48:8080/ > Install suggested plugins.
 
 ## Create First Admin User in Jenkins:
 username: valyndsilva
 email:
 Save and Continue
-Copy the Jenkins URL: http://16.171.143.132:8080/ > Save and Finish > Start using Jenkins
+Copy the Jenkins URL: http://16.171.132.48:8080/ > Save and Finish > Start using Jenkins
 
 ## Create a Pipeline in Jenkins:
 + New Item > Item Name: automated-pipeline > Freestyle Project > OK
@@ -156,7 +150,7 @@ Go to AWS EC2 SonarQube Instance > Instance ID > Copy Public IPv4 address
 Open a new Terminal > new tab:
 ```
 cd Downloads
-ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.135.185
+ssh -i SSH-KEY-Jenkins.pem ubuntu@13.51.194.9
 ```
 
 Now we are in the SonarQube Virtual Machine. We can change the hostname as below:
@@ -165,12 +159,165 @@ sudo hostnamectl set-hostname sonarqube
 /bin/bash
 ```
 
-You will notice the hostname has now changed from ubuntu@ip-172-31-43-223 to ubuntu@sonarqube.
+The hostname has now changed from ubuntu@ip-172-31-37-196 to ubuntu@sonarqube.
 
-Let's do the same for Jenkins Virtual Machine. Open the terminal priviously running with Jenkins.
+Let's do the same for Jenkins Virtual Machine. Open the terminal previously running with Jenkins.
 ```
 sudo hostnamectl set-hostname jenkins
 /bin/bash
 ```
 
-the hostname has now changed from ubuntu@ip-172-31-34-239 to ubuntu@jenkins.
+The hostname has now changed from ubuntu@ip-172-31-37-196 to ubuntu@jenkins.
+
+## Update the system repository and download SonarQube on VM:
+```
+sudo apt update
+sudo apt install openjdk-17-jre (require version 17 of the jre for sonarqube)
+```
+
+Go to https://www.sonarsource.com/products/sonarqube/downloads/success-download-community-edition/
+Right click on "Download Community Edition" > Copy link address
+
+```
+wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-10.1.0.73491.zip
+ls (copy the zip name)
+sudo apt install unzip
+unzip sonarqube-10.1.0.73491.zip
+ls
+cd sonarqube-10.1.0.73491
+ls
+cd bin
+ls
+cd macosx-universal-64
+./sonar.sh console
+```
+
+## Allow Port 9000 in your SonarQube EC2 Instance:
+Go to the SonarQube EC2 Instance > Security > Security groups link > Edit Inbound Rules > Add Rule > Type: Custom TCP >  Port Range: 9000 > Source: 0.0.0.0/0 > Description: SonarQube > Save Rules
+
+## Open SonarQube:
+Go to the SonarQube EC2 Instance > Copy the Public IPv4 address
+Next in the web browser add this URL: http://13.51.194.9:9000/
+The default username and pass for Sonarqube is admin > Login
+Update password.
+
+Select project Type: Manually
+Project display name*: nextjs-website
+Project key*: nextjs-website
+main branch name: main
+Next
+What should be the baseline for new code for this project? Use the global setting
+How do you want to analyze your repository? With Jenkins
+Select your DevOps platform > GitHub
+Prerequisites > Configure Analysis 
+Create a Pipeline Job > Continue 
+Create a GitHub Webhook > Continue 
+Create a Jenkinsfile > Other > Create a sonar-project.properties file in your repository and paste in the sonar.projectKey=nextjs-website > Finish this tutorial
+
+### Generate a Token in SonarQube:
+Go to the Admin user logo on the top right corner > My Account > Security
+Name: SonarQube-Token > Type: Global Analysis Token > Expires in: 30days > Generate
+Copy the token and save it somewhere for later use 
+
+## Install Plugins in Jenkins:
+Go to http://16.171.132.48:8080/ > Manage Jenkins > Plugins > Available Plugins 
+Search: SonarQube Scanner > Download now and install after restart > Check box "Restart Jenkins when installation is complete and no jobs are running"
+Search: SSH2 Easy > Install without restart  > Download now and install after restart > Check box "Restart Jenkins when installation is complete and no jobs are running"
+
+ ## Setting up SonarQube
+ Go to the Jenkins URL http://16.171.132.48:8080/
+ Go to Manage Jenkins > Tools > SonnarQube Scanner > Add SonarQube Scanner > Name: SonarQube Scanner > Check "Install automatically" > Save
+ Go to Manage Jenkins > System > SonarQube servers > Add SonarQube > Name: SonarQube-Server > Server URL: http://13.51.194.9:9000 > Server authentication token - Add: Jenkins > Domain:Global credentials > Kind: Secret Text > Secret: (text copied earlier from SonarQube - My Account) >  ID: Sonar-Token > Add > Select Server authentication token: Sonar-Token > Save
+ Go to the pipeline created at the begining "automated-pipeline" > Configure > Build Steps > Add build step > Execute SonarQube Scanner > Analysis Properties: sonar.projectKey=nextjs-website > Save
+ Go to "automated-pipeline" > Build Now > All Tests Should Pass
+
+## Create a Server for Docker.
+Go to AWS EC2 Docker Instance > Instance ID > Copy Public IPv4 address
+Open a new Terminal > new tab:
+```
+cd Downloads
+ssh -i SSH-KEY-Jenkins.pem ubuntu@16.171.154.7
+```
+
+Now we are in the Docker Virtual Machine. We can change the hostname as below:
+```
+sudo hostnamectl set-hostname docker
+/bin/bash
+```
+
+The hostname has now changed from ubuntu@ip-172-31-33-54 to ubuntu@docker.
+
+
+## Update the system repository and download Docker on VM:
+Go to https://docs.docker.com/engine/install/ubuntu/ and follow the steps.
+
+### Update the apt package index and install packages to allow apt to use a repository over HTTPS:
+```
+sudo apt update
+sudo apt-get update
+sudo apt-get install ca-certificates curl gnupg
+```
+
+### Add Docker’s official GPG key:
+```
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+```
+
+### Use the following command to set up the repository:
+```
+echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+
+### Install Docker Engine
+#### Update the apt package index:
+```
+sudo apt-get update
+```
+
+#### Install Docker Engine, containerd, and Docker Compose:
+```
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+## Swith to Jenkins User:
+On the terminal running Jenkins:
+```
+sudo su jenkins
+ssh ubuntu@16.171.154.7 (check if you can access the docker server from here)
+```
+
+You get an error: "Permission denied (publickey)"
+
+Got to the terminal running Docker:
+```
+sudo su
+nano /etc/ssh/sshd_config
+```
+
+In the file search this line:
+```
+#PubkeyAuthentication yes 
+```
+Uncomment this line by removing the  # at the beginning
+
+```
+PubkeyAuthentication yes 
+```
+
+Also update this line
+```
+# To disable tunneled clear text passwords, change to no here!
+PasswordAuthentication no
+```
+
+to 
+
+```
+# To disable tunneled clear text passwords, change to no here!
+PasswordAuthentication yes
+```
