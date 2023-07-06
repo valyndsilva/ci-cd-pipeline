@@ -59,7 +59,7 @@ sudo apt-get update
 sudo apt-get install jenkins
 ```
 
-## Setup administrator password:
+## Setup ubuntu administrator password:
 we need to switch to superuser by running this command:
 ```
 sudo su
@@ -309,7 +309,7 @@ Uncomment this line by removing the  # at the beginning
 PubkeyAuthentication yes 
 ```
 
-Also update this line
+Also update this line:
 ```
 # To disable tunneled clear text passwords, change to no here!
 PasswordAuthentication no
@@ -320,4 +320,129 @@ to
 ```
 # To disable tunneled clear text passwords, change to no here!
 PasswordAuthentication yes
+```
+
+## Restart the SSHD Service:
+In the docker terminal window:
+```
+systemctl restart sshd
+```
+
+Now go back to the Jenkins Terminal window and verify again:
+```
+ssh ubuntu@16.171.154.7
+```
+
+It asks for the ubuntu user password. We can set a password by running this command:
+First go to the Docker Terminal
+```
+passwd ubuntu
+```
+Set your preferred password. Now, go back to the Jenkins Server Terminal:
+```
+ssh ubuntu@16.171.132.48
+password: (Enter the ubuntu user password when prompted)
+```
+
+This should log you into the Docker Ubuntu VM.
+```
+exit
+```
+
+## Generate a public and private key:
+
+In the Jenkins Terminal window:
+```
+ssh-keygen
+Enter file in which to save the key (/var/lib/jenkins/.ssh/id_rsa): Enter
+Enter passphrase (empty for no passphrase): Enter
+Enter same passphrase again: Enter
+ssh-copy-id ubuntu@16.171.154.7
+ssh ubuntu@16.171.154.7 (Verify access to docker after adding the keys)
+exit
+```
+
+Now go to the Jenkins Dashboard (http://16.171.132.48:8080/) > Manage Jenkins > System > Scroll to "Server Group Center" > Server Group List : Add
+Group Name: Docker-Server, SSH Port: 22, User Name: ubuntu, Password: ubuntu user password created in terminal earlier. > Save
+Go back to Manage Plugins > System > Scroll to "Server List" : Add
+Server Group: Socker-Server, Server Name: Docker-1, Server IP: 16.171.154.7 > Save
+Go to Jenkins Dashboard > automated-pipeline > Configure > Build steps > Add build step > Remote Shell > Shell: touch test.txt > Save > Build Now
+
+Go to Docker Terminal:
+```
+ls
+```
+You should now see the touch test.txt file here.
+
+## Create a folder in the docker VM:
+In the ubuntu@docker terminal:
+```
+mkdir website
+cd website
+pwd (get the path and copy it to add in the Execute Shell command)
+```
+
+## Create Dockerfile in root
+Go to https://hub.docker.com/_/nginx 
+
+Create Dockerfile without any extension in the root directory.
+```
+FROM nginx
+COPY ./usr/share/nginx/html/
+```
+
+Commit and push the changes to the git repo.
+
+Now, go to http://16.171.132.48:8080/ and you should see the automated-pipeline is automaticlly triggered and executed.
+Go to Configure > Scroll to Build Steps > Remove the "Remote Shell" > Add build step > Execute Shell
+
+We copy the current contents to the remote docker server:
+Copy the public IPv4 address from the Docker instance
+```
+scp -r ./* ubuntu@16.171.154.7:~/website/
+```
+Save > Build Now
+
+In the docker terminal:
+```
+ls
+```
+
+Now, go to http://16.171.132.48:8080/. Go to Configure > Scroll to Build Steps > Add build step > Add "Remote Shell"
+
+```
+cd /home/ubuntu/website
+```
+Save
+
+First, we verify to check if we can run the docker command in the docker terminal.
+```
+docker ps
+```
+We receive a permission denied error.
+
+If we run it with a sudo it works:
+```
+sudo docker ps
+```
+
+But it doesn't work if you run it as the current user. To fix this issue we need to add the current user to the docker group using this command in the docker terminal:
+```
+sudo usermod -aG docker ubuntu
+newgrp docker
+docker ps
+```
+
+Now, go to http://16.171.132.48:8080/. Go to Configure > Scroll to Build Steps > Update "Remote Shell" commands:
+
+```
+cd /home/ubuntu/website
+docker build -t mywebsite . (here mywebsite is the docker image name we want to name it)
+docker run -d -p 8085:80 --name=nextjs-website mywebsite (run container from this image, 8085 port of the system , 80 port of the container)
+```
+Save > Build Now
+
+Next, verify if the container is working fine by running this comand in the docker terminal:
+```
+docker ps
 ```
